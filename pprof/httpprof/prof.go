@@ -19,10 +19,10 @@ https://blog.golang.org/2011/06/profiling-go-programs.html
 package httpprof
 
 import (
-	"runtime"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"runtime"
 )
 
 func init() {

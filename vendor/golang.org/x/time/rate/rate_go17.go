@@ -19,4 +19,3 @@ func (lim *Limiter) Wait(ctx context.Context) (err error) {
 func (lim *Limiter) WaitN(ctx context.Context, n int) (err error) {
 	return lim.waitN(ctx, n)
 }
-

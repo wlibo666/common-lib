@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -35,4 +36,62 @@ func GetEnvDef(key, defV string) string {
 
 func SetMaxProc() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+}
+
+var (
+	GFuncCostTime *sync.Map = &sync.Map{}
+)
+
+type CostTimeStore struct {
+	Cnt  int64
+	Cost time.Duration
+}
+
+func CostTime(funcName string, start time.Time) {
+	terminal := time.Since(start)
+	v, ok := GFuncCostTime.Load(funcName)
+	if ok {
+		v.(*CostTimeStore).Cnt += 1
+		v.(*CostTimeStore).Cost += terminal
+		return
+	}
+	tmp := &CostTimeStore{
+		Cnt:  1,
+		Cost: terminal,
+	}
+	GFuncCostTime.Store(funcName, tmp)
+}
+
+func AddCostTime(funcName string, cost time.Duration) {
+	v, ok := GFuncCostTime.Load(funcName)
+	if ok {
+		v.(*CostTimeStore).Cnt += 1
+		v.(*CostTimeStore).Cost += cost
+		return
+	}
+	tmp := &CostTimeStore{
+		Cnt:  1,
+		Cost: cost,
+	}
+	GFuncCostTime.Store(funcName, tmp)
+}
+
+func LoopPrintCostTime(interval ...int) {
+	go func(interval ...int) {
+		inter := 5
+		if len(interval) > 0 {
+			inter = interval[0]
+		}
+		for {
+			time.Sleep(time.Duration(inter) * time.Second)
+			GFuncCostTime.Range(func(key, value interface{}) bool {
+				store := value.(*CostTimeStore)
+				fmt.Fprintf(os.Stdout, "func:%-30s | cnt:%-8d | cost: %-16d ns | avg:%-16d ns | %-8d ms | avg:%-8d ms\n",
+					key, store.Cnt, store.Cost, store.Cost/time.Duration(store.Cnt), store.Cost/time.Millisecond,
+					(store.Cost/time.Millisecond)/time.Duration(store.Cnt))
+				GFuncCostTime.Delete(key)
+				return true
+			})
+		}
+	}(interval...)
 }
