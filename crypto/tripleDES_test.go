@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	key        = []byte("012345678901234567890123")
+	key        = []byte("8b67fbf824d6f1f2cc2b37ec")
 	clearText  = []byte("hello,world.")
-	cipherText = "tdjwn3NgyFUKM7IlbCF09Q=="
+	cipherText = "MdUHFGOnzjm8mPPkF7FIAA=="
 )
 
 func TestFillNBytes(t *testing.T) {
