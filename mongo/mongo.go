@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-mgo/mgo"
+	"gopkg.in/mgo.v2"
 )
 
 // mongo连接配置
