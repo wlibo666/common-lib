@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lestrrat/go-file-rotatelogs"
 	"github.com/rifflock/lfshook"
+	"os"
 )
 
 const (
@@ -16,7 +17,11 @@ const (
 )
 
 var (
-	DefFileLogger *logrus.Logger
+	DefFileLogger *logrus.Logger = &logrus.Logger{
+		Out:       os.Stdout,
+		Formatter: new(logrus.JSONFormatter),
+		Level:     logrus.DebugLevel,
+	}
 )
 
 func NewDefaultFileLogger(fileName string, fileCnt int, logFormat ...int) error {
