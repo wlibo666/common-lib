@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net"
@@ -172,4 +174,13 @@ func GenMd5Sign(data []byte) string {
 
 func MkdirByFile(filename string) error {
 	return os.MkdirAll(filepath.Dir(filename), os.ModePerm)
+}
+
+func JsonIndent(data []byte) ([]byte, error) {
+	var out bytes.Buffer
+	err := json.Indent(&out, data, "", "    ")
+	if err != nil {
+		return []byte{}, err
+	}
+	return out.Bytes(), nil
 }
