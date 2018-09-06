@@ -90,7 +90,7 @@ func LBCDoTimeout(cliName string, req *fasthttp.Request, resp *fasthttp.Response
 	return resp.Body(), resp.StatusCode(), err
 }
 
-func PostAndGetData(host, method, url string, args map[string]string, body []byte, cookies map[string]interface{}, timeout int) ([]byte, error) {
+func HttpForData(host, method, url string, args map[string]string, body []byte, cookies map[string]interface{}, timeout int) ([]byte, error) {
 	req := &fasthttp.Request{}
 	resp := &fasthttp.Response{}
 	req.Header.SetHost(host)
@@ -121,7 +121,7 @@ func PostAndGetData(host, method, url string, args map[string]string, body []byt
 	return resp.Body(), nil
 }
 
-func PostAndGetResponse(host, method, url string, args map[string]string, body []byte, cookies map[string]interface{}, timeout int) (*fasthttp.Response, error) {
+func HttpForResponse(host, method, url string, args map[string]string, body []byte, cookies map[string]interface{}, timeout int) (*fasthttp.Response, error) {
 	req := &fasthttp.Request{}
 	resp := &fasthttp.Response{}
 	req.Header.SetHost(host)

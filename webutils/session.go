@@ -1,17 +1,25 @@
 package webutils
 
 import (
-	"fmt"
 	"github.com/astaxie/beego/session"
 )
 
 var (
-	MemorySession     *session.Manager
-	memorySessionConf = `{"cookieName":"%s", "enableSetCookie,omitempty": true, "gclifetime":3600, "maxLifetime": 3600, "secure": false, "cookieLifeTime": %d, "providerConfig": ""}`
+	MemorySession       *session.Manager
+	memorySessionConfig = &session.ManagerConfig{
+		CookieName:      "gosessionid",
+		EnableSetCookie: true,
+		Gclifetime:      3600,
+		Maxlifetime:     3600,
+		Secure:          false,
+		CookieLifeTime:  3600,
+		ProviderConfig:  "/tmp",
+	}
 )
 
 func MemorySessionInit(sessionName string, expire int) {
-	config := fmt.Sprintf(memorySessionConf, sessionName, expire)
-	MemorySession, _ = session.NewManager("memory", config)
+	memorySessionConfig.CookieName = sessionName
+	memorySessionConfig.CookieLifeTime = expire
+	MemorySession, _ = session.NewManager("memory", memorySessionConfig)
 	go MemorySession.GC()
 }
