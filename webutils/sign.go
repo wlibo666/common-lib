@@ -26,8 +26,8 @@ func SetParamSign(sign string) {
 
 func GenRequestArgs(args map[string]string) string {
 	var argString []string
-	for _, k := range args {
-		argString = append(argString, fmt.Sprintf("%s=%s", k, args[k]))
+	for k, v := range args {
+		argString = append(argString, fmt.Sprintf("%s=%s", k, v))
 	}
 	return strings.Join(argString, "&")
 }

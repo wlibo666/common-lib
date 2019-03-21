@@ -12,3 +12,8 @@ func TestJsonIndent(t *testing.T) {
 	}
 	t.Logf("byte:\n%s\n", b)
 }
+
+func TestRemovePath(t *testing.T) {
+	f := RemovePath("/root/work/WorkCode/src/git.smartisan.com/infrastructure/eththirdproxy/controller/business/mongo.go:167", 7)
+	t.Logf("path:%s", f)
+}

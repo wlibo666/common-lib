@@ -8,11 +8,11 @@ import (
 )
 
 func TestSetString(t *testing.T) {
-	RedisInit("10.110.92.171:6379,10.110.92.171:6380,10.110.92.172:6379", "", 3, 3, 1)
+	RedisInit("172.16.21.22:6379", "", 3, 1, 1)
 	//RedisInit("10.110.92.171:6379", "", 3, 3, 1)
-	for i := 0; i < 100; i++ {
+	/*for i := 0; i < 100; i++ {
 		go SetString("aaa", "bbb")
-	}
+	}*/
 
 	err := SetString("testkey", "testvalue")
 	if err != nil {
@@ -24,10 +24,39 @@ func TestSetString(t *testing.T) {
 	}
 	t.Logf("testkey:%s", s)
 	Delete("testkey")
+
+	otherRedis := "other"
+	RedisInit("172.16.17.25:6379", "", 3, 3, 1, otherRedis)
+
+	redisInfos.Range(func(key, value interface{}) bool {
+		t.Logf("info key:%s,pool:%v", key, value)
+		return true
+	})
+
+	redisPools.Range(func(key, value interface{}) bool {
+		t.Logf("pool key:%s,pool:%v", key, value)
+		return true
+	})
+
+	//RedisInit("10.110.92.171:6379", "", 3, 3, 1)
+	/*for i := 0; i < 100; i++ {
+		go SetString("aaa", "bbb")
+	}*/
+
+	err = SetString("testkey", "testvalueother", otherRedis)
+	if err != nil {
+		t.Fatalf("set testkey failed,err:%s", err.Error())
+	}
+	s, err = GetString("testkey", otherRedis)
+	if err != nil {
+		t.Fatalf("get testkey failed,err:%s", err.Error())
+	}
+	t.Logf("testkey:%s", s)
+	Delete("testkey")
 }
 
 func BenchmarkSetString(b *testing.B) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 10000, 10)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 10000, 10)
 	wg := sync.WaitGroup{}
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
@@ -45,7 +74,7 @@ func BenchmarkSetString(b *testing.B) {
 }
 
 func TestSetInt64(t *testing.T) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 3, 1)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 3, 1)
 
 	err := SetInt64("testint64", 88888888)
 	if err != nil {
@@ -60,7 +89,7 @@ func TestSetInt64(t *testing.T) {
 }
 
 func TestHashKeys(t *testing.T) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 3, 1)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 3, 1)
 
 	n, err := HashSet("testhashkeys", "onekey", []byte("onvalue"))
 	if err != nil {
@@ -77,7 +106,7 @@ func TestHashKeys(t *testing.T) {
 }
 
 func TestIncr(t *testing.T) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 3, 1)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 3, 1)
 
 	Delete("incrkey")
 	n, err := Incr("incrkey")
@@ -94,7 +123,7 @@ func TestIncr(t *testing.T) {
 }
 
 func TestIncrBy(t *testing.T) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 3, 1)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 3, 1)
 
 	Delete("incrbykey")
 	n, err := IncrBy("incrbykey", 5)
@@ -112,7 +141,7 @@ func TestIncrBy(t *testing.T) {
 }
 
 func TestExpire(t *testing.T) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 3, 1)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 3, 1)
 
 	Delete("expirerkey")
 	SetString("expirerkey", "expirerkey")
@@ -120,7 +149,7 @@ func TestExpire(t *testing.T) {
 }
 
 func TestTtl(t *testing.T) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 3, 1)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 3, 1)
 
 	Delete("expirerkey")
 	SetString("expirerkey", "expirerkey")
@@ -141,7 +170,7 @@ func echoKey(key string) error {
 }
 
 func TestScan(t *testing.T) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 10000, 10)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 10000, 10)
 	for i := 0; i < 100; i++ {
 		SetString(fmt.Sprintf("key_%d", i), fmt.Sprintf("value_%d", i))
 	}
@@ -158,7 +187,7 @@ func echoHashKey(key, field string) error {
 }
 
 func TestHScan(t *testing.T) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 10000, 10)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 10000, 10)
 	for i := 0; i < 100; i++ {
 		HashSet("testhashscan", fmt.Sprintf("key_%d", i), []byte(fmt.Sprintf("value_%d", i)))
 	}
@@ -168,7 +197,7 @@ func TestHScan(t *testing.T) {
 }
 
 func TestExist(t *testing.T) {
-	RedisInit("10.135.29.168:16379", "wangchunyan1@le.com", 3, 10000, 10)
+	RedisInit("10.135.29.168:16379", "wlibo666", 3, 10000, 10)
 
 	SetString("exkey", "exvalue")
 	n, err := Exist("exkey")

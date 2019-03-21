@@ -1,7 +1,9 @@
 package webutils
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
@@ -127,4 +129,13 @@ func GetQueryInt64(ctx *gin.Context, key string) (int64, int) {
 		return 0, ERRNO_INVALID_REQ_PARAM
 	}
 	return n, ERRNO_SUCCESS
+}
+
+func GenPostArgs(args map[string]string) string {
+	var arg []string
+	for k, v := range args {
+		tmp := fmt.Sprintf("%s=%s", k, v)
+		arg = append(arg, tmp)
+	}
+	return strings.Join(arg, "&")
 }

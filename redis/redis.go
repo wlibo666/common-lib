@@ -10,50 +10,77 @@ import (
 	"github.com/wlibo666/common-lib/atomic"
 )
 
+const (
+	DEFAULT_REDIS = "default"
+)
+
 var (
-	redisInfo        RedisInfo
-	defaultRedisPool *redisgo.Pool
-	mux              = &sync.Mutex{}
-	connIndex        uint64
+	// store type: *RedisInfo
+	redisInfos sync.Map
+	// store type: *redisgo.Pool
+	redisPools sync.Map
+	// store type: * uint64
+	connIndexs sync.Map
+)
+
+var (
+	ERR_NOT_FOUD = fmt.Errorf("not found redis pool by name")
 )
 
 type RedisInfo struct {
+	Name      string
 	Addr      string
-	PassWd    string
+	Pwd       string
 	Timeout   int
 	MaxActive int
 	MaxIdle   int
 }
 
-func RedisInit(addr, passwd string, timeout, active, idle int) {
-	redisInfo.Addr = addr
-	redisInfo.PassWd = passwd
-	redisInfo.Timeout = timeout
-	redisInfo.MaxActive = active
-	redisInfo.MaxIdle = idle
+func RedisInit(addr, passwd string, timeout, active, idle int, name ...string) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	info := &RedisInfo{
+		Name:      redisName,
+		Addr:      addr,
+		Pwd:       passwd,
+		Timeout:   timeout,
+		MaxActive: active,
+		MaxIdle:   idle,
+	}
+	redisInfos.Store(redisName, info)
 
-	defaultRedisPool = pollInit(redisInfo)
+	redisPool := pollInit(info)
+	redisPools.Store(redisName, redisPool)
 }
 
-func pollInit(info RedisInfo) *redisgo.Pool {
+func pollInit(info *RedisInfo) *redisgo.Pool {
 	return &redisgo.Pool{
 		Dial: func() (redisgo.Conn, error) {
 			var err error
 			addrs := strings.Split(info.Addr, ",")
 			addsLen := uint64(len(addrs))
-			if atomic.GetUInt64(&connIndex) >= addsLen {
-				atomic.ResetUInt64(&connIndex)
+			v, _ := connIndexs.Load(info.Name)
+			if v == nil {
+				var index uint64
+				connIndexs.Store(info.Name, &index)
+				v = &index
 			}
-			for i := atomic.GetUInt64(&connIndex); i < addsLen; i++ {
-				atomic.IncrUInt64(&connIndex)
+
+			if atomic.GetUInt64(v.(*uint64)) >= addsLen {
+				atomic.ResetUInt64(v.(*uint64))
+			}
+			for i := atomic.GetUInt64(v.(*uint64)); i < addsLen; i++ {
+				atomic.IncrUInt64(v.(*uint64))
 				c, err := redisgo.Dial("tcp4", addrs[i],
 					redisgo.DialConnectTimeout(time.Duration(info.Timeout)*time.Second),
 				)
 				if err != nil {
 					continue
 				}
-				if info.PassWd != "" {
-					_, err = c.Do("AUTH", info.PassWd)
+				if info.Pwd != "" {
+					_, err = c.Do("AUTH", info.Pwd)
 					if err != nil {
 						c.Close()
 						continue
@@ -75,94 +102,142 @@ func pollInit(info RedisInfo) *redisgo.Pool {
 	}
 }
 
-func SetString(key, val string) error {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func SetString(key, val string, name ...string) error {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 	_, err := c.Do("SET", key, val)
 
 	return err
 }
 
-func SetStringNx(key, val string) error {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func SetStringNx(key, val string, name ...string) error {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 	_, err := c.Do("SETNX", key, val)
 
 	return err
 }
 
-func GetString(key string) (string, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func GetString(key string, name ...string) (string, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return "", ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
-	reply, err := redisgo.String(c.Do("GET", key))
 
+	reply, err := redisgo.String(c.Do("GET", key))
 	if err != nil {
 		return "", err
 	}
 	return reply, nil
 }
 
-func SetInt64(key string, val int64) error {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func SetInt64(key string, val int64, name ...string) error {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
+
 	_, err := c.Do("SET", key, val)
 
 	return err
 }
 
-func SetInt64Nx(key string, val int64) error {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func SetInt64Nx(key string, val int64, name ...string) error {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
+
 	_, err := c.Do("SETNX", key, val)
 
 	return err
 }
 
-func GetInt64(key string) (int64, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func GetInt64(key string, name ...string) (int64, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return 0, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
-	reply, err := redisgo.Int64(c.Do("GET", key))
 
+	reply, err := redisgo.Int64(c.Do("GET", key))
 	if err != nil {
 		return 0, err
 	}
 	return reply, nil
 }
 
-func HashMultiGet(fields ...interface{}) ([]string, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func HashMultiGet(name string, fields ...interface{}) ([]string, error) {
+	pool, ok := redisPools.Load(name)
+	if !ok {
+		return []string{}, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Strings(c.Do("HMGET", fields...))
 }
 
-func HashMultiSet(param ...interface{}) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func HashMultiSet(name string, param ...interface{}) {
+	pool, ok := redisPools.Load(name)
+	if !ok {
+		return
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	c.Do("HMSET", param...)
 }
 
-func HashGetAll(hashKey string) ([]string, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func HashGetAll(hashKey string, name ...string) ([]string, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return []string{}, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	ret, err := c.Do("HGETALL", hashKey)
@@ -176,10 +251,16 @@ func HashGetAll(hashKey string) ([]string, error) {
 	return nil, nil
 }
 
-func HashGet(hashKey string, key string) ([]byte, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func HashGet(hashKey string, key string, name ...string) ([]byte, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return []byte{}, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	ret, err := c.Do("HGET", hashKey, key)
@@ -193,82 +274,132 @@ func HashGet(hashKey string, key string) ([]byte, error) {
 	return nil, nil
 }
 
-func HashSet(hashKey string, key string, val []byte) (int, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func HashSet(hashKey string, key string, val []byte, name ...string) (int, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return 0, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Int(c.Do("HSET", hashKey, key, val))
 }
 
-func HashDel(hashKey, field string) (int, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func HashDel(hashKey, field string, name ...string) (int, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return 0, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Int(c.Do("HDEL", hashKey, field))
 }
 
-func HashKeys(hashKey string) ([]string, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func HashKeys(hashKey string, name ...string) ([]string, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return []string{}, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Strings(c.Do("HKEYS", hashKey))
 }
 
-func Incr(key string) (int64, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func Incr(key string, name ...string) (int64, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return 0, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("INCR", key))
 }
 
-func IncrBy(key string, cnt int64) (int64, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func IncrBy(key string, cnt int64, name ...string) (int64, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return 0, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("INCRBY", key, cnt))
 }
 
-func Expire(key string, t int64) (int64, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func Expire(key string, t int64, name ...string) (int64, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return 0, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("EXPIRE", key, t))
 }
 
-func Ttl(key string) (int64, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func Ttl(key string, name ...string) (int64, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return 0, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("TTL", key))
 }
 
-func Delete(key string) (int64, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func Delete(key string, name ...string) (int64, error) {
+	redisName := DEFAULT_REDIS
+	if len(name) >= 1 {
+		redisName = name[0]
+	}
+	pool, ok := redisPools.Load(redisName)
+	if !ok {
+		return 0, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("DEL", key))
 }
 
-func Exist(key ...interface{}) (int64, error) {
-	mux.Lock()
-	c := defaultRedisPool.Get()
-	mux.Unlock()
+func Exist(name string, key ...interface{}) (int64, error) {
+	pool, ok := redisPools.Load(name)
+	if !ok {
+		return 0, ERR_NOT_FOUD
+	}
+	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("EXISTS", key...))
@@ -277,7 +408,7 @@ func Exist(key ...interface{}) (int64, error) {
 // 处理scan返回key的函数定义
 type ScanProcFunc func(key string) error
 
-func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int) error {
+func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int, name ...string) error {
 	var scanPos int64 = 0
 	scanLock := sync.Mutex{}
 	exitFlag := false
@@ -297,11 +428,17 @@ func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int) error
 	for i := 0; i < threadNum; i++ {
 		index := i
 		wg.Add(1)
-		go func(index int) error {
+		go func(index int, name ...string) error {
 			defer wg.Done()
-			mux.Lock()
-			c := defaultRedisPool.Get()
-			mux.Unlock()
+			redisName := DEFAULT_REDIS
+			if len(name) >= 1 {
+				redisName = name[0]
+			}
+			pool, ok := redisPools.Load(redisName)
+			if !ok {
+				return ERR_NOT_FOUD
+			}
+			c := pool.(*redisgo.Pool).Get()
 			defer c.Close()
 
 			for {
@@ -340,7 +477,7 @@ func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int) error
 				}
 			}
 			return nil
-		}(index)
+		}(index, name...)
 	}
 	wg.Wait()
 	return nil
@@ -349,7 +486,7 @@ func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int) error
 // 处理scan返回key的函数定义
 type HScanProcFunc func(key, field string) error
 
-func HScan(hashKey, fieldFlag string, count int, scanFunc HScanProcFunc, threadNum int) error {
+func HScan(hashKey, fieldFlag string, count int, scanFunc HScanProcFunc, threadNum int, name ...string) error {
 	var scanPos int64 = 0
 	scanLock := sync.Mutex{}
 	exitFlag := false
@@ -369,11 +506,17 @@ func HScan(hashKey, fieldFlag string, count int, scanFunc HScanProcFunc, threadN
 	for i := 0; i < threadNum; i++ {
 		in := i
 		wg.Add(1)
-		go func(index int) error {
+		go func(index int, name ...string) error {
 			defer wg.Done()
-			mux.Lock()
-			c := defaultRedisPool.Get()
-			mux.Unlock()
+			redisName := DEFAULT_REDIS
+			if len(name) >= 1 {
+				redisName = name[0]
+			}
+			pool, ok := redisPools.Load(redisName)
+			if !ok {
+				return ERR_NOT_FOUD
+			}
+			c := pool.(*redisgo.Pool).Get()
 			defer c.Close()
 
 			for {
@@ -416,7 +559,7 @@ func HScan(hashKey, fieldFlag string, count int, scanFunc HScanProcFunc, threadN
 				}
 			}
 			return nil
-		}(in)
+		}(in, name...)
 	}
 	wg.Wait()
 	return nil

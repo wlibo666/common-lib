@@ -17,7 +17,13 @@ type ControllerFunc struct {
 var (
 	allControllers []*ControllerFunc
 	allMiddleware  []gin.HandlerFunc
+
+	noRouteHandler gin.HandlerFunc
 )
+
+func SetNoRouteHandler(handler gin.HandlerFunc) {
+	noRouteHandler = handler
+}
 
 func AddMiddleware(middleware gin.HandlerFunc) {
 	allMiddleware = append(allMiddleware, middleware)
@@ -34,6 +40,10 @@ func (c *ControllerFunc) AddHook(f gin.HandlerFunc) {
 func ServerRun(addr string) error {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
+
+	if noRouteHandler != nil {
+		engine.NoRoute(noRouteHandler)
+	}
 	// 添加所有的中间件处理函数
 	for _, middle := range allMiddleware {
 		engine.Use(middle)
@@ -51,6 +61,12 @@ func ServerRun(addr string) error {
 			engine.HEAD(ctl.HandlePath, ctl.Hooks...)
 		case http.MethodPut:
 			engine.PUT(ctl.HandlePath, ctl.Hooks...)
+		case http.MethodDelete:
+			engine.DELETE(ctl.HandlePath, ctl.Hooks...)
+		case http.MethodOptions:
+			engine.OPTIONS(ctl.HandlePath, ctl.Hooks...)
+		case http.MethodPatch:
+			engine.PATCH(ctl.HandlePath, ctl.Hooks...)
 		}
 	}
 	return engine.Run(addr)

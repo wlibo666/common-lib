@@ -113,10 +113,29 @@ func LoopPrintCostTime(interval ...int) {
 	}(interval...)
 }
 
+var (
+	removePathPos int
+)
+
+func SetRemovePathPos(pos int) {
+	removePathPos = pos
+}
+
 // 获取当前代码的文件名称和行数
 func GetFileAndLine() string {
 	_, file, line, _ := runtime.Caller(1)
-	return fmt.Sprintf("%s:%d", file, line)
+	return fmt.Sprintf("%s:%d", RemovePath(file, removePathPos), line)
+}
+
+func RemovePath(name string, pos int) string {
+	if removePathPos == 0 {
+		return name
+	}
+	s := strings.Split(name, "/")
+	if len(s) > pos {
+		return strings.Join(s[pos:], "/")
+	}
+	return name
 }
 
 // 程序退出时等待秒数，等待原因是程序启动后出错退出时可能无法及时记录日志.

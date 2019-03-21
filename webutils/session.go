@@ -11,15 +11,16 @@ var (
 		EnableSetCookie: true,
 		Gclifetime:      3600,
 		Maxlifetime:     3600,
-		Secure:          false,
+		Secure:          true,
 		CookieLifeTime:  3600,
 		ProviderConfig:  "/tmp",
 	}
 )
 
-func MemorySessionInit(sessionName string, expire int) {
+func MemorySessionInit(sessionName string, expire int, secure bool) {
 	memorySessionConfig.CookieName = sessionName
 	memorySessionConfig.CookieLifeTime = expire
+	memorySessionConfig.Secure = secure
 	MemorySession, _ = session.NewManager("memory", memorySessionConfig)
 	go MemorySession.GC()
 }

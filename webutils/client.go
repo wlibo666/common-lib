@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -191,4 +194,65 @@ func CheckSignByFasthttp(secret string, ctx *fasthttp.RequestCtx) bool {
 		return false
 	}
 	return _sign == sign
+}
+
+// return: isHttps/host/uri/error
+// eg: https://www.baidu.com/api/v1/name,return: true,www.baidu.com,/api/v1/name,nil
+func ParseUrl(url string) (bool, string, string) {
+	var beginPos, endPos int
+	var host, uri string
+	isHttps := strings.HasPrefix(url, "https://")
+	if isHttps {
+		beginPos += 8
+	}
+	if strings.HasPrefix(url, "http://") {
+		beginPos += 7
+	}
+	endPos = strings.Index(url[beginPos:], "/")
+	if endPos > 0 {
+		host = url[beginPos : beginPos+endPos]
+		uriPos := strings.Index(url[beginPos+endPos:], "?")
+		if uriPos > 0 {
+			uri = url[beginPos+endPos : beginPos+endPos+uriPos]
+		} else {
+			uri = url[beginPos+endPos:]
+		}
+	} else {
+		host = url[beginPos:]
+		uri = "/"
+	}
+	return isHttps, host, uri
+}
+
+func NewMutilpartBuf(fieldname, filename string) (*bytes.Buffer, string, error) {
+	if filename == "" {
+		return nil, "", fmt.Errorf("filename is empty")
+	}
+	fi, err := os.Stat(filename)
+	if err != nil {
+		return nil, "", err
+	}
+	if !fi.Mode().IsRegular() {
+		return nil, "", fmt.Errorf(filename + " is not a regular file")
+	}
+	buf := new(bytes.Buffer)
+	w := multipart.NewWriter(buf)
+	defer w.Close()
+
+	pkg, err := w.CreateFormFile(fieldname, filepath.Base(filename))
+	if err != nil {
+		return nil, "", err
+	}
+
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, "", err
+	}
+	defer f.Close()
+
+	_, err = io.Copy(pkg, f)
+	if err != nil {
+		return nil, "", err
+	}
+	return buf, w.FormDataContentType(), nil
 }

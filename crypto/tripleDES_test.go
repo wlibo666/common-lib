@@ -22,7 +22,17 @@ func TestFillNBytes(t *testing.T) {
 	t.Logf("newkey1:%s", newKey4)
 }
 
+func myt(t *testing.T) {
+	dst, err := TripleDesEncrypt([]byte("www.smartisan.com"), []byte("123456789012345678901234"))
+	if err != nil {
+		t.Fatalf("TripleDesEncrypt failed,err:%s", err.Error())
+	}
+	t.Logf("dst:%x, %s", dst, base64.StdEncoding.EncodeToString(dst))
+}
+
 func TestTripleDESEncrypt(t *testing.T) {
+	myt(t)
+
 	dst, err := TripleDesEncrypt(clearText, key)
 	if err != nil {
 		t.Fatalf("TripleDesEncrypt failed,err:%s", err.Error())

@@ -21,7 +21,10 @@ const (
 	ERRNO_NOT_FOUND
 	ERRNO_INTERNAL_ERROR
 	ERRNO_USER_NOT_EXIST
+	ERRNO_USER_EXIST
 	ERRNO_INCORRECT_PWD
+	ERRNO_USER_LOCKED
+	ERRNO_NOT_LOGIN
 	ERRNO_USED
 )
 
@@ -44,9 +47,13 @@ func init() {
 	ErrInfo[ERRNO_NOT_FOUND] = "Not found"
 	ErrInfo[ERRNO_INTERNAL_ERROR] = "Internal error"
 	ErrInfo[ERRNO_USER_NOT_EXIST] = "User is not exist"
+	ErrInfo[ERRNO_USER_EXIST] = "User is exist"
 	ErrInfo[ERRNO_INCORRECT_PWD] = "Incorrect password"
+	ErrInfo[ERRNO_USER_LOCKED] = "User is locked"
+	ErrInfo[ERRNO_NOT_LOGIN] = "Not login"
 }
 
+// errno begin from 11000
 func AddErrno(errno int, err string) int {
 	if errno >= ERRNO_SUCCESS && errno <= ERRNO_USED {
 		return ERRNO_USED
