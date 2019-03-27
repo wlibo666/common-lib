@@ -222,8 +222,8 @@ func (scmd *ScanCmd) clientScan(client *redis.Client) error {
 	if matchKey == "" {
 		matchKey = "*"
 	}
-	// 每次返回条数
-	var scanCnt int64 = 100
+	// 每次扫描条数
+	var scanCnt int64 = 5000
 	if scmd.Count > 0 {
 		scanCnt = scmd.Count
 	}

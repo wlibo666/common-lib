@@ -429,6 +429,7 @@ func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int, name 
 		index := i
 		wg.Add(1)
 		go func(index int, name ...string) error {
+			var err error = nil
 			defer wg.Done()
 			redisName := DEFAULT_REDIS
 			if len(name) >= 1 {
@@ -441,23 +442,26 @@ func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int, name 
 			c := pool.(*redisgo.Pool).Get()
 			defer c.Close()
 
+			keyWait := &sync.WaitGroup{}
 			for {
 				scanLock.Lock()
 				if exitFlag {
 					scanLock.Unlock()
-					return nil
+					break
 				}
 				// 执行一次scan操作
 				tmpRes, err := c.Do("SCAN", scanPos, "MATCH", key, "COUNT", tmpCount)
 				if err != nil {
 					scanLock.Unlock()
-					return fmt.Errorf("scan thread:%d scan failed,err:%s", index, err.Error())
+					err = fmt.Errorf("scan thread:%d scan failed,err:%s", index, err.Error())
+					break
 				}
 				res := tmpRes.([]interface{})
 				// 返回结果数组长度不为2,则格式错误
 				if len(res) != 2 {
 					scanLock.Unlock()
-					return fmt.Errorf("scan thread:%d scan res len is:%d,not 2", index, len(res))
+					err = fmt.Errorf("scan thread:%d scan res len is:%d,not 2", index, len(res))
+					break
 				}
 				// 获取下一次scan位置
 				var tmpNum int64 = 0
@@ -470,13 +474,16 @@ func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int, name 
 				scanLock.Unlock()
 				if scanFunc != nil {
 					for _, v := range res[1].([]interface{}) {
+						keyWait.Add(1)
 						go func(key string) {
 							scanFunc(key)
+							keyWait.Done()
 						}(string(v.([]byte)))
 					}
 				}
 			}
-			return nil
+			keyWait.Wait()
+			return err
 		}(index, name...)
 	}
 	wg.Wait()
