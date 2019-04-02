@@ -442,7 +442,8 @@ func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int, name 
 			c := pool.(*redisgo.Pool).Get()
 			defer c.Close()
 
-			keyWait := &sync.WaitGroup{}
+			// 不能将处理key的函数放入协程，否则数据太多时导致Redis连接池打满
+			//keyWait := &sync.WaitGroup{}
 			for {
 				scanLock.Lock()
 				if exitFlag {
@@ -474,15 +475,16 @@ func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int, name 
 				scanLock.Unlock()
 				if scanFunc != nil {
 					for _, v := range res[1].([]interface{}) {
-						keyWait.Add(1)
+						/*keyWait.Add(1)
 						go func(key string) {
 							scanFunc(key)
-							keyWait.Done()
-						}(string(v.([]byte)))
+							//keyWait.Done()
+						}(string(v.([]byte)))*/
+						scanFunc(string(v.([]byte)))
 					}
 				}
 			}
-			keyWait.Wait()
+			//keyWait.Wait()
 			return err
 		}(index, name...)
 	}
