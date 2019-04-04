@@ -24,7 +24,8 @@ var (
 )
 
 var (
-	ERR_NOT_FOUD = fmt.Errorf("not found redis pool by name")
+	ERR_NOT_FOUD        = fmt.Errorf("not found redis pool by name")
+	ERR_NO_ENOUGH_CONNS = fmt.Errorf("no enough connection in pool")
 )
 
 type RedisInfo struct {
@@ -113,6 +114,9 @@ func SetString(key, val string, name ...string) error {
 	}
 	c := pool.(*redisgo.Pool).Get()
 	defer c.Close()
+	if c == nil {
+		return ERR_NO_ENOUGH_CONNS
+	}
 	_, err := c.Do("SET", key, val)
 
 	return err
@@ -128,6 +132,9 @@ func SetStringNx(key, val string, name ...string) error {
 		return ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 	_, err := c.Do("SETNX", key, val)
 
@@ -144,6 +151,9 @@ func GetString(key string, name ...string) (string, error) {
 		return "", ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return "", ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	reply, err := redisgo.String(c.Do("GET", key))
@@ -163,6 +173,9 @@ func SetInt64(key string, val int64, name ...string) error {
 		return ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	_, err := c.Do("SET", key, val)
@@ -180,6 +193,9 @@ func SetInt64Nx(key string, val int64, name ...string) error {
 		return ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	_, err := c.Do("SETNX", key, val)
@@ -197,6 +213,9 @@ func GetInt64(key string, name ...string) (int64, error) {
 		return 0, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return 0, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	reply, err := redisgo.Int64(c.Do("GET", key))
@@ -212,20 +231,27 @@ func HashMultiGet(name string, fields ...interface{}) ([]string, error) {
 		return []string{}, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return nil, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Strings(c.Do("HMGET", fields...))
 }
 
-func HashMultiSet(name string, param ...interface{}) {
+func HashMultiSet(name string, param ...interface{}) error {
 	pool, ok := redisPools.Load(name)
 	if !ok {
-		return
+		return ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
-	c.Do("HMSET", param...)
+	_, err := c.Do("HMSET", param...)
+	return err
 }
 
 func HashGetAll(hashKey string, name ...string) ([]string, error) {
@@ -238,6 +264,9 @@ func HashGetAll(hashKey string, name ...string) ([]string, error) {
 		return []string{}, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return nil, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	ret, err := c.Do("HGETALL", hashKey)
@@ -261,6 +290,9 @@ func HashGet(hashKey string, key string, name ...string) ([]byte, error) {
 		return []byte{}, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return nil, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	ret, err := c.Do("HGET", hashKey, key)
@@ -284,6 +316,9 @@ func HashSet(hashKey string, key string, val []byte, name ...string) (int, error
 		return 0, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return 0, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Int(c.Do("HSET", hashKey, key, val))
@@ -299,6 +334,9 @@ func HashDel(hashKey, field string, name ...string) (int, error) {
 		return 0, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return 0, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Int(c.Do("HDEL", hashKey, field))
@@ -314,6 +352,9 @@ func HashKeys(hashKey string, name ...string) ([]string, error) {
 		return []string{}, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return nil, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Strings(c.Do("HKEYS", hashKey))
@@ -329,6 +370,9 @@ func Incr(key string, name ...string) (int64, error) {
 		return 0, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return 0, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("INCR", key))
@@ -344,6 +388,9 @@ func IncrBy(key string, cnt int64, name ...string) (int64, error) {
 		return 0, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return 0, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("INCRBY", key, cnt))
@@ -359,6 +406,9 @@ func Expire(key string, t int64, name ...string) (int64, error) {
 		return 0, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return 0, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("EXPIRE", key, t))
@@ -374,6 +424,9 @@ func Ttl(key string, name ...string) (int64, error) {
 		return 0, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return 0, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("TTL", key))
@@ -389,6 +442,9 @@ func Delete(key string, name ...string) (int64, error) {
 		return 0, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return 0, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("DEL", key))
@@ -400,6 +456,9 @@ func Exist(name string, key ...interface{}) (int64, error) {
 		return 0, ERR_NOT_FOUD
 	}
 	c := pool.(*redisgo.Pool).Get()
+	if c == nil {
+		return 0, ERR_NO_ENOUGH_CONNS
+	}
 	defer c.Close()
 
 	return redisgo.Int64(c.Do("EXISTS", key...))
@@ -440,6 +499,9 @@ func Scan(keyFlag string, count int, scanFunc ScanProcFunc, threadNum int, name 
 				return ERR_NOT_FOUD
 			}
 			c := pool.(*redisgo.Pool).Get()
+			if c == nil {
+				return ERR_NO_ENOUGH_CONNS
+			}
 			defer c.Close()
 
 			// 不能将处理key的函数放入协程，否则数据太多时导致Redis连接池打满
@@ -526,6 +588,9 @@ func HScan(hashKey, fieldFlag string, count int, scanFunc HScanProcFunc, threadN
 				return ERR_NOT_FOUD
 			}
 			c := pool.(*redisgo.Pool).Get()
+			if c == nil {
+				return ERR_NO_ENOUGH_CONNS
+			}
 			defer c.Close()
 
 			for {
