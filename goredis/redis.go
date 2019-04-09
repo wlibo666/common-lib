@@ -1,12 +1,12 @@
 package goredis
 
 import (
-	"sync"
-
 	"errors"
 	"fmt"
-	"github.com/go-redis/redis"
+	"sync"
 	"time"
+
+	"github.com/go-redis/redis"
 )
 
 var (
@@ -16,14 +16,20 @@ var (
 )
 
 const (
-	DEFAULT_NAME = "default"
+	DEFAULT_NAME  = "default"
+	MIN_POOL_SIZE = 10
 )
 
-func InitClient(addr, pwd string, db int, name ...string) error {
+func InitClient(addr, pwd string, db int, poolSize int, name ...string) error {
+	size := poolSize
+	if size < MIN_POOL_SIZE {
+		size = MIN_POOL_SIZE
+	}
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: pwd,
 		DB:       db,
+		PoolSize: size,
 	})
 	_, err := client.Ping().Result()
 	if err != nil {
@@ -75,4 +81,95 @@ func SetString(key, value string, expirySeconds int, name ...string) error {
 	cmd := cli.Set(key, value, time.Duration(expirySeconds)*time.Second)
 	_, err := cmd.Result()
 	return err
+}
+
+func Delete(key string, name ...string) error {
+	cli := GetClient(name...)
+	if cli == nil {
+		return ERR_NOT_FOUND_CLIENT
+	}
+	_, err := cli.Del(key).Result()
+	return err
+}
+
+func BatchDelete(keys []string, name ...string) (int64, error) {
+	cli := GetClient(name...)
+	if cli == nil {
+		return 0, ERR_NOT_FOUND_CLIENT
+	}
+	return cli.Del(keys...).Result()
+}
+
+// 处理scan返回key的函数定义
+type ScanProcFunc func(key string) error
+
+func Scan(keyFlag string, count int64, scanFunc ScanProcFunc, threadNum int, name ...string) error {
+	var scanPos uint64 = 0
+	scanLock := sync.Mutex{}
+	exitFlag := false
+	wg := &sync.WaitGroup{}
+
+	// SCAN匹配关键字
+	key := keyFlag
+	if key == "" {
+		key = "*"
+	}
+	// 每次返回结果条数
+	var tmpCount int64 = 1000
+	if count > 0 {
+		tmpCount = count
+	}
+
+	for i := 0; i < threadNum; i++ {
+		wg.Add(1)
+		go func(name ...string) error {
+			var err error = nil
+			defer wg.Done()
+
+			redisName := DEFAULT_NAME
+			if len(name) >= 1 {
+				redisName = name[0]
+			}
+			cli := GetClient(redisName)
+			if cli == nil {
+				return ERR_NOT_FOUND_CLIENT
+			}
+			for {
+				scanLock.Lock()
+				if exitFlag {
+					scanLock.Unlock()
+					break
+				}
+				// 执行一次scan操作
+				keys, curpos, err := cli.Scan(scanPos, key, tmpCount).Result()
+				if err != nil {
+					scanLock.Unlock()
+					break
+				}
+				// 获取下一次scan位置
+				if curpos > 0 {
+					scanPos = curpos
+				} else {
+					exitFlag = true
+				}
+				scanLock.Unlock()
+				if scanFunc != nil {
+					for _, v := range keys {
+						scanFunc(v)
+					}
+				}
+			}
+			return err
+		}(name...)
+	}
+	wg.Wait()
+	return nil
+}
+
+// 处理scan返回key的函数定义
+type HScanProcFunc func(key, field string) error
+
+func HScan(hashKey, fieldFlag string, count int, scanFunc HScanProcFunc, threadNum int, name ...string) error {
+
+	return nil
 }
