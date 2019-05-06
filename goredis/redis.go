@@ -169,6 +169,65 @@ func Scan(keyFlag string, count int64, scanFunc ScanProcFunc, threadNum int, nam
 // 处理scan返回key的函数定义
 type HScanProcFunc func(key, field string) error
 
-func HScan(hashKey, fieldFlag string, count int, scanFunc HScanProcFunc, threadNum int, name ...string) error {
+func HScan(hashKey, fieldFlag string, count int64, scanFunc HScanProcFunc, threadNum int, name ...string) error {
+	var scanPos uint64 = 0
+	scanLock := sync.Mutex{}
+	exitFlag := false
+	wg := &sync.WaitGroup{}
+
+	// SCAN匹配关键字
+	key := fieldFlag
+	if key == "" {
+		key = "*"
+	}
+	// 每次返回结果条数
+	var tmpCount int64 = 1000
+	if count > 0 {
+		tmpCount = count
+	}
+
+	for i := 0; i < threadNum; i++ {
+		wg.Add(1)
+		go func(name ...string) error {
+			var err error = nil
+			defer wg.Done()
+
+			redisName := DEFAULT_NAME
+			if len(name) >= 1 {
+				redisName = name[0]
+			}
+			cli := GetClient(redisName)
+			if cli == nil {
+				return ERR_NOT_FOUND_CLIENT
+			}
+			for {
+				scanLock.Lock()
+				if exitFlag {
+					scanLock.Unlock()
+					break
+				}
+				// 执行一次scan操作
+				keys, curpos, err := cli.HScan(hashKey, scanPos, key, tmpCount).Result()
+				if err != nil {
+					scanLock.Unlock()
+					break
+				}
+				// 获取下一次scan位置
+				if curpos > 0 {
+					scanPos = curpos
+				} else {
+					exitFlag = true
+				}
+				scanLock.Unlock()
+				if scanFunc != nil {
+					for _, v := range keys {
+						scanFunc(hashKey, v)
+					}
+				}
+			}
+			return err
+		}(name...)
+	}
+	wg.Wait()
 	return nil
 }
