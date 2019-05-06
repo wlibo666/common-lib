@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/wlibo666/common-lib/logrus"
 	"github.com/wlibo666/common-lib/utils"

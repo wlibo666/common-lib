@@ -2,13 +2,13 @@ package log
 
 import (
 	"errors"
+	"os"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/lestrrat/go-file-rotatelogs"
 	"github.com/rifflock/lfshook"
-	"os"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -56,6 +56,7 @@ func NewFileLogger(fileName string, fileCnt int, logFormat ...int) (*logrus.Logg
 	debugWriter, err := rotatelogs.New(
 		fileName+".debug.%Y%m%d",
 		rotatelogs.WithLinkName(fileName+".debug"),
+		rotatelogs.WithMaxAge(time.Duration(fileCnt)*24*time.Hour),
 		rotatelogs.WithRotationCount(fileCnt),
 	)
 	if err != nil {
@@ -65,6 +66,7 @@ func NewFileLogger(fileName string, fileCnt int, logFormat ...int) (*logrus.Logg
 	infoWriter, err := rotatelogs.New(
 		fileName+".info.%Y%m%d",
 		rotatelogs.WithLinkName(fileName+".info"),
+		rotatelogs.WithMaxAge(time.Duration(fileCnt)*24*time.Hour),
 		rotatelogs.WithRotationCount(fileCnt),
 	)
 	if err != nil {
@@ -74,6 +76,7 @@ func NewFileLogger(fileName string, fileCnt int, logFormat ...int) (*logrus.Logg
 	warnWriter, err := rotatelogs.New(
 		fileName+".warn.%Y%m%d",
 		rotatelogs.WithLinkName(fileName+".warn"),
+		rotatelogs.WithMaxAge(time.Duration(fileCnt)*24*time.Hour),
 		rotatelogs.WithRotationCount(fileCnt),
 	)
 	if err != nil {

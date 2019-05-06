@@ -170,6 +170,5 @@ func Scan(keyFlag string, count int64, scanFunc ScanProcFunc, threadNum int, nam
 type HScanProcFunc func(key, field string) error
 
 func HScan(hashKey, fieldFlag string, count int, scanFunc HScanProcFunc, threadNum int, name ...string) error {
-
 	return nil
 }

@@ -2,8 +2,9 @@ package log
 
 import (
 	"testing"
+	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func TestNewFileLogger(t *testing.T) {
@@ -13,12 +14,15 @@ func TestNewFileLogger(t *testing.T) {
 	}
 	SetDefaultLoggerLevel(logrus.DebugLevel)
 
-	DefFileLogger.Debugf("this is for:%s", "debugf")
-
-	DefFileLogger.WithFields(
-		logrus.Fields{
-			"for":    "withfield",
-			"author": "wangchunyan",
-			"cnt":    3,
-		}).Debugf("this is for:%s", "fieldDebugf")
+	for i := 0; i < 60; i++ {
+		t.Logf("i is:%d\n", i)
+		DefFileLogger.Debugf("i is:%d", i)
+		DefFileLogger.WithFields(
+			logrus.Fields{
+				"for":    "withfield",
+				"author": "wangchunyan",
+				"cnt":    2,
+			}).Debugf("i is:%d", i)
+		time.Sleep(time.Second)
+	}
 }
