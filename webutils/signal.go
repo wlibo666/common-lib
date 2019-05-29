@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/wlibo666/common-lib/logrus"
 	"github.com/wlibo666/common-lib/utils"
 )

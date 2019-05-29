@@ -5,10 +5,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/lestrrat/go-file-rotatelogs"
 	"github.com/rifflock/lfshook"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -136,7 +136,7 @@ func MiddleAccessLog(ctx *gin.Context) {
 	end := time.Now()
 	cost := end.Sub(start)
 
-	DefFileLogger.Debugf("%d | %13v | %15s | %s %s | %s",
+	DefFileLogger.Debugf("resp:[%d] cost:[%13v] client:[%15s] method:[%s] uri:[%s] user-agent:[%s] resp-len:[%d]",
 		ctx.Writer.Status(), cost, ctx.ClientIP(), ctx.Request.Method,
-		ctx.Request.RequestURI, ctx.Request.UserAgent())
+		ctx.Request.RequestURI, ctx.Request.UserAgent(), ctx.Writer.Size())
 }

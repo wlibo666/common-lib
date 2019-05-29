@@ -17,3 +17,9 @@ func TestRemovePath(t *testing.T) {
 	f := RemovePath("/root/work/WorkCode/src/git.smartisan.com/infrastructure/eththirdproxy/controller/business/mongo.go:167", 7)
 	t.Logf("path:%s", f)
 }
+
+func TestGetRoutineId(t *testing.T) {
+	id := GetRoutineId()
+
+	t.Logf("routine:%s end", id)
+}
