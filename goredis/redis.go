@@ -55,6 +55,29 @@ func GetClient(name ...string) *redis.Client {
 	return v.(*redis.Client)
 }
 
+func Exist(key string, name ...string) (bool, error) {
+	cli := GetClient(name...)
+	if cli == nil {
+		return false, ERR_NOT_FOUND_CLIENT
+	}
+	cnt, err := cli.Exists(key).Result()
+	if err != nil {
+		return false, err
+	}
+	if cnt == 1 {
+		return true, nil
+	}
+	return false, nil
+}
+
+func HSet(key, field, value string, name ...string) (bool, error) {
+	cli := GetClient(name...)
+	if cli == nil {
+		return false, ERR_NOT_FOUND_CLIENT
+	}
+	return cli.HSet(key, field, value).Result()
+}
+
 func HGet(key, field string, name ...string) (string, error) {
 	cli := GetClient(name...)
 	if cli == nil {
@@ -71,6 +94,22 @@ func HGetall(key string, name ...string) (map[string]string, error) {
 	}
 	cmd := cli.HGetAll(key)
 	return cmd.Result()
+}
+
+func HDel(key, filed string, name ...string) (int64, error) {
+	cli := GetClient(name...)
+	if cli == nil {
+		return 0, ERR_NOT_FOUND_CLIENT
+	}
+	return cli.HDel(key, filed).Result()
+}
+
+func HDels(key string, fields []string, name ...string) (int64, error) {
+	cli := GetClient(name...)
+	if cli == nil {
+		return 0, ERR_NOT_FOUND_CLIENT
+	}
+	return cli.HDel(key, fields...).Result()
 }
 
 func SetString(key, value string, expirySeconds int, name ...string) error {

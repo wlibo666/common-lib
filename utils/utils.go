@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -202,4 +203,13 @@ func JsonIndent(data []byte) ([]byte, error) {
 		return []byte{}, err
 	}
 	return out.Bytes(), nil
+}
+
+func GenStr32() (string, error) {
+	c := make([]byte, 32)
+	_, e := crand.Read(c)
+	if e != nil {
+		return "", e
+	}
+	return fmt.Sprintf("%x", md5.Sum(c)), nil
 }
