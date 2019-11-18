@@ -112,7 +112,7 @@ func HDels(key string, fields []string, name ...string) (int64, error) {
 	return cli.HDel(key, fields...).Result()
 }
 
-func SetString(key, value string, expirySeconds int, name ...string) error {
+func Set(key string, value interface{}, expirySeconds int, name ...string) error {
 	cli := GetClient(name...)
 	if cli == nil {
 		return ERR_NOT_FOUND_CLIENT
@@ -129,6 +129,46 @@ func Delete(key string, name ...string) error {
 	}
 	_, err := cli.Del(key).Result()
 	return err
+}
+
+func get(key string, name ...string) (*redis.StringCmd, error) {
+	cli := GetClient(name...)
+	if cli == nil {
+		return nil, ERR_NOT_FOUND_CLIENT
+	}
+	return cli.Get(key), nil
+}
+
+func GetString(key string, name ...string) (string, error) {
+	cmd, err := get(key, name...)
+	if err != nil {
+		return "", err
+	}
+	return cmd.Val(), nil
+}
+
+func GetInt(key string, name ...string) (int, error) {
+	cmd, err := get(key, name...)
+	if err != nil {
+		return -1, err
+	}
+	return cmd.Int()
+}
+
+func GetInt64(key string, name ...string) (int64, error) {
+	cmd, err := get(key, name...)
+	if err != nil {
+		return -1, err
+	}
+	return cmd.Int64()
+}
+
+func GetUint64(key string, name ...string) (uint64, error) {
+	cmd, err := get(key, name...)
+	if err != nil {
+		return 0, err
+	}
+	return cmd.Uint64()
 }
 
 func BatchDelete(keys []string, name ...string) (int64, error) {
