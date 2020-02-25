@@ -4,8 +4,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/wlibo666/common-lib/logrus"
+	"git.smartisan.com/infrastructure/golang-common/log"
 	"github.com/wlibo666/common-lib/utils"
 )
 
@@ -14,10 +13,10 @@ func SignalHandle() error {
 	signal.Notify(c, os.Interrupt, os.Kill)
 	go func() {
 		s := <-c
-		log.DefFileLogger.WithFields(logrus.Fields{
+		log.InfoWithFields(log.Fields{
 			ERR_FIELD_POSITION: utils.GetFileAndLine(),
 			"signal":           s.String(),
-		}).Info("recv signal,will exit with code 0.")
+		}, "recv signal,will exit with code 0.")
 		utils.ExitWaitDef(0)
 	}()
 	return nil

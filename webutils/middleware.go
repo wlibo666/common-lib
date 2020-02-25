@@ -4,9 +4,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"git.smartisan.com/infrastructure/golang-common/log"
 	"github.com/gin-gonic/gin"
-	"github.com/wlibo666/common-lib/logrus"
 	"github.com/wlibo666/common-lib/utils"
 )
 
@@ -37,12 +36,12 @@ func CheckTime(ctx *gin.Context) {
 
 	now := time.Now().Unix()
 	if math.Abs(float64(now-t)) > float64(checkTimeRange)*1.0 {
-		log.DefFileLogger.WithFields(logrus.Fields{
+		log.WarnWithFields(log.Fields{
 			ERR_FIELD_POSITION: utils.GetFileAndLine(),
 			"now":              now,
 			PARAM_T:            t,
 			"checkTimeRange":   checkTimeRange,
-		}).Warn("Invalid param _t,time range is too large than config")
+		}, "Invalid param _t,time range is too large than config")
 		ServeError(ERRNO_INVALID_REQ_PARAM, GetErrno(ERRNO_INVALID_REQ_PARAM), ctx)
 		return
 	}
@@ -60,9 +59,9 @@ func CheckSign(ctx *gin.Context) {
 	// 校验签名
 	pass := CheckSignByRequest(_secret, ctx.Request)
 	if !pass {
-		log.DefFileLogger.WithFields(logrus.Fields{
+		log.WarnWithFields(log.Fields{
 			ERR_FIELD_POSITION: utils.GetFileAndLine(),
-		}).Warn("Invalid signature")
+		}, "Invalid signature")
 		ServeError(ERRNO_INVALID_SIGN, GetErrno(ERRNO_INVALID_SIGN), ctx)
 		return
 	}

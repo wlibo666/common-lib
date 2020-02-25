@@ -35,6 +35,9 @@ func ServeResp(data interface{}, ctx *gin.Context) {
 		Err:   "",
 		Data:  data,
 	}
+	if data == nil {
+		resp.Data = struct{}{}
+	}
 	ctx.JSON(http.StatusOK, resp)
 }
 
